@@ -1,82 +1,42 @@
-defmodule ServerProcess do
-  def start(callback_module) do
-    spawn(fn ->
-      initial_state = callback_module.init
-      loop(callback_module, initial_state)
-    end)
-  end
-
-  def call(server_pid, request) do
-    send(server_pid, {:call, request, self})
-
-    receive do
-      {:response, response} -> response
-    end
-  end
-
-  def cast(server_pid, request) do
-    send(server_pid, {:cast, request})
-    :ok
-  end
-
-  defp loop(callback_module, current_state) do
-    receive do
-      {:call, request, caller} ->
-        {response, new_state} = callback_module.handle_call(request,
-                                                            current_state
-        )
-
-        send(caller, {:response, response})
-
-        loop(callback_module, new_state)
-      {:cast, request} ->
-        new_state = callback_module.handle_cast(request,
-                                                current_state
-        )
-
-        loop(callback_module, new_state)
-    end
-  end
-end
-
 defmodule TodoServer do
+  use GenServer
+
   def start do
-    Process.register(ServerProcess.start(TodoServer), :todo_server)
-    :ok
+    GenServer.start(TodoServer, nil, name: :todo_server)
   end
 
-  def init do
-    TodoList.new
+  def init(_) do
+    {:ok, TodoList.new}
   end
 
   def add_entry(new_entry) do
-    ServerProcess.cast(:todo_server, {:add_entry, new_entry})
+    GenServer.cast(:todo_server, {:add_entry, new_entry})
   end
 
   def update_entry(entry_id, updater_fun) do
-    ServerProcess.cast(:todo_server, {:update_entry, entry_id, updater_fun})
+    GenServer.cast(:todo_server, {:update_entry, entry_id, updater_fun})
   end
 
   def delete_entry(entry_id) do
-    ServerProcess.cast(:todo_server, {:delete_entry, entry_id})
+    GenServer.cast(:todo_server, {:delete_entry, entry_id})
   end
 
   def entries(date) do
-    ServerProcess.call(:todo_server, {:entries, date})
+    GenServer.call(:todo_server, {:entries, date})
   end
 
   def handle_cast({:add_entry, new_entry}, todo_list) do
-    TodoList.add_entry(todo_list, new_entry)
+    {:noreply, TodoList.add_entry(todo_list, new_entry)}
   end
   def handle_cast({:update_entry, entry_id, updater_fun}, todo_list) do
-    TodoList.update_entry(todo_list, entry_id, updater_fun)
+    {:noreply, TodoList.update_entry(todo_list, entry_id, updater_fun)}
   end
   def handle_cast({:delete_entry, entry_id}, todo_list) do
-    TodoList.delete_entry(todo_list, entry_id)
+    {:noreply, TodoList.delete_entry(todo_list, entry_id)}
   end
 
-  def handle_call({:entries, date}, todo_list) do
-    {TodoList.entries(todo_list, date), todo_list}
+  def handle_call({:entries, date}, _, todo_list) do
+    {:reply, TodoList.entries(todo_list, date), todo_list}
   end
 end
 
