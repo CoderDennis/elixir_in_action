@@ -1,22 +1,23 @@
 defmodule TodoServer do
   def start do
-    spawn(fn -> loop(TodoList.new) end)
+    Process.register(spawn(fn -> loop(TodoList.new) end), :todo_server)
+    :ok
   end
 
-  def add_entry(todo_server, new_entry) do
-    send(todo_server, {:add_entry, new_entry})
+  def add_entry(new_entry) do
+    send(:todo_server, {:add_entry, new_entry})
   end
 
-  def update_entry(todo_server, entry_id, updater_fun) do
-    send(todo_server, {:update_entry, entry_id, updater_fun})
+  def update_entry(entry_id, updater_fun) do
+    send(:todo_server, {:update_entry, entry_id, updater_fun})
   end
 
-  def delete_entry(todo_server, entry_id) do
-    send(todo_server, {:delete_entry, entry_id})
+  def delete_entry(entry_id) do
+    send(:todo_server, {:delete_entry, entry_id})
   end
 
-  def entries(todo_server, date) do
-    send(todo_server, {:entries, self, date})
+  def entries(date) do
+    send(:todo_server, {:entries, self, date})
     receive do
       {:entries, entries} -> entries
     end
