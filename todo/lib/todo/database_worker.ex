@@ -14,6 +14,7 @@ defmodule Todo.DatabaseWorker do
   end
 
   def init(db_folder) do
+    File.mkdir_p(db_folder)
     {:ok, db_folder}
   end
 
@@ -30,6 +31,9 @@ defmodule Todo.DatabaseWorker do
            end
     {:reply, data, db_folder}
   end
+
+  def handle_info(:stop, state), do: {:stop, :normal, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   defp file_name(db_folder, key), do: "#{db_folder}/#{key}"
 end
