@@ -2,6 +2,7 @@ defmodule Todo.Database do
   use GenServer
 
   def start(db_folder) do
+    IO.puts "Starting database server."
     GenServer.start(__MODULE__, db_folder, name: :database_server)
   end
 
