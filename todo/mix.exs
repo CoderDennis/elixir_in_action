@@ -4,7 +4,7 @@ defmodule Todo.Mixfile do
   def project do
     [app: :todo,
      version: "0.0.1",
-     elixir: "~> 1.1",
+     elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps]
@@ -14,7 +14,10 @@ defmodule Todo.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger]]
+    [
+      applications: [:logger],
+      mod: {Todo.Application, []}
+    ]
   end
 
   # Dependencies can be Hex packages:
@@ -27,6 +30,6 @@ defmodule Todo.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    []
+    [{:meck, "0.8.4", only: :test}]
   end
 end
