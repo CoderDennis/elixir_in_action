@@ -11,12 +11,15 @@ defmodule Todo.ProcessRegistry do
     GenServer.call(:process_registry, {:register_name, key, pid})
   end
 
-  def whereis_name(key) do
-    GenServer.call(:process_registry, {:whereis_name, key})
-  end
-
   def unregister_name(key) do
     GenServer.call(:process_registry, {:unregister_name, key})
+  end
+
+  def whereis_name(key) do
+    case :ets.lookup(:process_registry, key) do
+      [{^key, pid}] -> pid
+      _ -> :undefined
+    end
   end
 
   def send(key, message) do
@@ -29,41 +32,28 @@ defmodule Todo.ProcessRegistry do
   end
 
   def init(_) do
-    {:ok, %{}}
+    :ets.new(:process_registry, [:set, :named_table, :protected])
+    {:ok, nil}
   end
 
-
-  def handle_call({:register_name, key, pid}, _, process_registry) do
-    case Map.get(process_registry, key) do
-      nil ->
-        # Sets up a monitor to the registered process
-        Process.monitor(pid)
-        {:reply, :yes, Map.put(process_registry, key, pid)}
-      _ ->
-        {:reply, :no, process_registry}
+  def handle_call({:register_name, key, pid}, _, state) do
+    if whereis_name(key) != :undefined do
+      {:reply, :no, state}
+    else
+      Process.monitor(pid)
+      :ets.insert(:process_registry, {key, pid})
+      {:reply, :yes, state}
     end
   end
-
-  def handle_call({:whereis_name, key}, _, process_registry) do
-    {:reply, Map.get(process_registry, key, :undefined), process_registry}
+  def handle_call({:unregister_name, key}, _, state) do
+    :ets.delete(:process_registry, key)
+    {:reply, key, state}
   end
 
-  def handle_call({:unregister_name, key}, _, process_registry) do
-    {:reply, key, Map.delete(process_registry, key)}
+  def handle_info({:DOWN, _, :process, pid, _}, state) do
+    :ets.match_delete(:process_registry, {:_, pid})
+    {:noreply, state}
   end
-
-  def handle_info({:DOWN, _, :process, pid, _}, process_registry) do
-    {:noreply, deregister_pid(process_registry, pid)}
-  end
-
   def handle_info(_, state), do: {:noreply, state}
 
-
-  defp deregister_pid(process_registry, pid) do
-    # We'll walk through each {key, value} item, and keep those elements whose
-    # value is different to the provided pid.
-    process_registry
-    |> Enum.filter(fn({_registered_alias, registered_process}) -> registered_process != pid end)
-    |> Enum.into(%{})
-  end
 end
