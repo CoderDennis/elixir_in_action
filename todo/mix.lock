@@ -1,0 +1,2 @@
+%{"gproc": {:hex, :gproc, "0.5.0"},
+  "meck": {:hex, :meck, "0.8.4"}}

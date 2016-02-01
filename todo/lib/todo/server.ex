@@ -8,11 +8,11 @@ defmodule Todo.Server do
   end
 
   defp via_tuple(name) do
-    {:via, Todo.ProcessRegistry, {:todo_server, name}}
+    {:via, :gproc, {:n, :l, {:todo_server, name}}}
   end
 
   def whereis(name) do
-    Todo.ProcessRegistry.whereis_name({:todo_server, name})
+    :gproc.whereis_name({:n, :l, {:todo_server, name}})
   end
 
   def add_entry(todo_server, new_entry) do
@@ -23,11 +23,9 @@ defmodule Todo.Server do
     GenServer.call(todo_server, {:entries, date})
   end
 
-
   def init(name) do
     {:ok, {name, Todo.Database.get(name) || Todo.List.new}}
   end
-
 
   def handle_cast({:add_entry, new_entry}, {name, todo_list}) do
     new_state = Todo.List.add_entry(todo_list, new_entry)
